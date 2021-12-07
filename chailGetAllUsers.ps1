@@ -11,7 +11,7 @@ $DateTime = Get-Date -Format "MM-dd-yyyy_HH-mm"
 
 # Sets the file path for the csv file to be exported
 
-$FilePath = "C:\temp\chaiAllUsers_$DateTime"
+$FilePath = "C:\temp\chaiAllUsers_$DateTime.csv"
 
 # Prompts for Global Admin credentials upon running the script
 
