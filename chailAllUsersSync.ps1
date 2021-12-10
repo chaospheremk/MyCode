@@ -42,10 +42,12 @@ foreach ($import in $Imported) {
     $Mobile = $import."Mobile Phone"
     $ObjectId = $import."ObjectId"
 
-# If Employee Number in the CSV has data, set Employee Number to the value in the field.
+    # If Employee Number in the CSV has data, set Employee Number to the value in the field.
     if (![string]::IsNullOrWhiteSpace($EmployeeId)) {
         Set-AzureADUserExtension -ObjectId $ObjectId -ExtensionName "employeeId" -ExtensionValue $EmployeeId
     }
+
+    # If Employee Number in the CSV is null, is empty, or has white space, set Employee Number to null.
     elseif ([string]::IsNullOrWhiteSpace($EmployeeId)) {
         Remove-AzureADUserExtension -ObjectId $ObjectId -ExtensionName "employeeId"
     }
