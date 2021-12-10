@@ -4,7 +4,7 @@
 # Begin script
 
 # Sets the file path for the csv to import
-$FilePath = "C:\temp\chaiAllUsers_Importtest.csv"
+$FilePath = "C:\temp\chaiAllUsers_Sync.csv"
 
 # Prompts for Global Admin credentials upon running the script
 
