@@ -33,7 +33,7 @@ Connect-AzureAD -Credential $Credential
 
 # Grabs a list of all users and the required properties
 
-$Results = Get-AzureADUser -All $true | Select UserPrincipalName,GivenName,Surname,JobTitle,PhysicalDeliveryOfficeName,Department,TelephoneNumber,Mobile,ObjectType,AccountEnabled,ObjectId
+$Results = Get-AzureADUser -All $true | Select-Object UserPrincipalName,GivenName,Surname,JobTitle,PhysicalDeliveryOfficeName,Department,TelephoneNumber,Mobile,ObjectType,AccountEnabled,ObjectId
 
 # For each user in the list, grabs supervisor, employee number, and the two custom extension properties for users
 # For each user, creates a PSCustomObject to store all of the correct information with the correct attribute labels
