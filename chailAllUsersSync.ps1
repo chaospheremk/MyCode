@@ -1,36 +1,30 @@
 # This script will import an AllUsers csv and set all information about all users based on what is in the csv.
 # Note: If a field in the csv file is blank, that information will be removed on the user.
 
-# Begin script
+#### Begin script ####
 
 # Sets the file path for the csv to import
 $FilePath = "C:\temp\chaiAllUsers_Sync.csv"
 
 # Prompts for Global Admin credentials upon running the script
-
 $Credential = Get-Credential
 
 # If the AzureAD module is not installed, it will be installed
-
 if(-not (Get-Module AzureAD -ListAvailable)){
     Install-Module AzureAD -Scope CurrentUser -Force
 }
 
 # Imports the AzureAD module
-
 Import-Module -Name AzureAD
 
 # Connects to AzureAD
-
 Connect-AzureAD -Credential $Credential
 
 # Imports the csv into an array
-
 $Imported = Import-Csv -Path $FilePath
 
 # For each record in the imported csv, this foreach loop will sync in the info in the csv to the corresponding fields in Azure AD for the user.
-# Note: The only field that will not be touched is the UserPrincipalName field in AD (aka Email Address in the csv).
-
+# Note: The fields in the csv that will not be imported or used are "Email Address", "Object Type", and "Account Enabled"
 foreach ($import in $Imported) {
     $EmployeeId = $import."Employee Number"
     $GivenName = $import."First Name"
@@ -147,7 +141,7 @@ foreach ($import in $Imported) {
     }
 }
 
-
+#### End script #### 
 
 
 
