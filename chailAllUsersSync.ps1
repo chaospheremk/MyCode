@@ -6,8 +6,8 @@
 # Set the file path for the csv to import
 # Note: The csv must contain the same field names as the exported csv from the chailGetAllUsers.ps1 script.
 #       This script uses the ObjectId field generated from the chailGetAllUsers.ps1 script.
-#       Rename the csv file to be imported to chaiAllUsers_Sync.csv and place it in C:\temp before running this script.
-$FilePath = "C:\temp\chaiAllUsers_Sync.csv"
+#       Name the csv file to be imported to chailAllUsers_Sync.csv and place it in C:\temp before running this script.
+$FilePath = "C:\temp\chailAllUsers_Sync.csv"
 
 # Prompts for Global Admin credentials upon running the script
 $Credential = Get-Credential
