@@ -1,12 +1,15 @@
+# DESCRIPTION
 # This script will import an AllUsers csv and set all information about all users based on what is in the csv.
 # Note: If a field in the csv file is blank, that information will be removed on the user.
+#
+# REQUIREMENTS
+# 1. The csv must contain the same field names as the exported csv from the chailGetAllUsers.ps1 script.
+# 2. This script uses the ObjectId field generated from the chailGetAllUsers.ps1 script.
+# 4. Name the csv file to be imported to chailAllUsers_Sync.csv and place it in C:\temp before running this script.
 
 #### Begin script ####
 
 # Set the file path for the csv to import
-# Note: The csv must contain the same field names as the exported csv from the chailGetAllUsers.ps1 script.
-#       This script uses the ObjectId field generated from the chailGetAllUsers.ps1 script.
-#       Name the csv file to be imported to chailAllUsers_Sync.csv and place it in C:\temp before running this script.
 $FilePath = "C:\temp\chailAllUsers_Sync.csv"
 
 # Prompts for Global Admin credentials upon running the script

@@ -1,3 +1,4 @@
+# DESCRIPTION
 # This script will pull all information about all users and export the info into a csv file
 
 ##### Begin script ####
