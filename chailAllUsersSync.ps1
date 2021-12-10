@@ -3,7 +3,10 @@
 
 #### Begin script ####
 
-# Sets the file path for the csv to import
+# Set the file path for the csv to import
+# Note: The csv must contain the same field names as the exported csv from the chailGetAllUsers.ps1 script.
+#       This script uses the ObjectId field generated from the chailGetAllUsers.ps1 script.
+#       Rename the csv file to be imported to chaiAllUsers_Sync.csv and place it in C:\temp before running this script.
 $FilePath = "C:\temp\chaiAllUsers_Sync.csv"
 
 # Prompts for Global Admin credentials upon running the script
@@ -23,7 +26,7 @@ Connect-AzureAD -Credential $Credential
 # Imports the csv into an array
 $Imported = Import-Csv -Path $FilePath
 
-# For each record in the imported csv, this foreach loop will sync in the info in the csv to the corresponding fields in Azure AD for the user.
+# For each record in the imported csv, this foreach loop will sync in the info in the csv to the corresponding fields in Azure AD for the user specified by the ObjectId field in the csv.
 # Note: The fields in the csv that will not be imported or used are "Email Address", "Object Type", and "Account Enabled"
 foreach ($import in $Imported) {
     $EmployeeId = $import."Employee Number"
@@ -39,6 +42,7 @@ foreach ($import in $Imported) {
     $Mobile = $import."Mobile Phone"
     $ObjectId = $import."ObjectId"
 
+# If Employee Number in the CSV has data, set Employee Number to the value in the field.
     if (![string]::IsNullOrWhiteSpace($EmployeeId)) {
         Set-AzureADUserExtension -ObjectId $ObjectId -ExtensionName "employeeId" -ExtensionValue $EmployeeId
     }
