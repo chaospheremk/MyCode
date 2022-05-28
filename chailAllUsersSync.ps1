@@ -12,9 +12,6 @@
 # Set the file path for the csv to import
 $FilePath = "C:\temp\chailAllUsers_Sync.csv"
 
-# Prompts for Global Admin credentials upon running the script
-$Credential = Get-Credential
-
 # If the AzureAD module is not installed, it will be installed
 if(-not (Get-Module AzureAD -ListAvailable)){
     Install-Module AzureAD -Scope CurrentUser -Force
@@ -23,8 +20,8 @@ if(-not (Get-Module AzureAD -ListAvailable)){
 # Imports the AzureAD module
 Import-Module -Name AzureAD
 
-# Connects to AzureAD
-Connect-AzureAD -Credential $Credential
+# Connects to AzureAD and prompts for credentials and MFA
+Connect-AzureAD
 
 # Imports the csv into an array
 $Imported = Import-Csv -Path $FilePath
