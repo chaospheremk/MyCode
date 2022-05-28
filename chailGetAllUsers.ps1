@@ -9,7 +9,11 @@ $ErrorActionPreference= 'silentlycontinue'
 # Gets a date time stamp for naming the file to be exported
 $DateTime = Get-Date -Format "MM-dd-yyyy_HH-mm"
 
-# Sets the file path for the csv file to be exported
+# Creates temp folder if it doesn't exist then sets the file path for the csv file to be exported
+$Folder = 'C:\temp'
+if (-not (Test-Path -Path $Folder)) {
+    New-Item -Path $Folder -ItemType Directory
+}
 $FilePath = "C:\temp\chailAllUsers_$DateTime.csv"
 
 # If the AzureAD module is not installed, it will be installed
