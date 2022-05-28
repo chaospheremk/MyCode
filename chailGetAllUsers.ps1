@@ -12,9 +12,6 @@ $DateTime = Get-Date -Format "MM-dd-yyyy_HH-mm"
 # Sets the file path for the csv file to be exported
 $FilePath = "C:\temp\chailAllUsers_$DateTime.csv"
 
-# Prompts for Global Admin credentials upon running the script
-$Credential = Get-Credential
-
 # If the AzureAD module is not installed, it will be installed
 if(-not (Get-Module AzureAD -ListAvailable)){
     Install-Module AzureAD -Scope CurrentUser -Force
@@ -23,8 +20,8 @@ if(-not (Get-Module AzureAD -ListAvailable)){
 # Imports the AzureAD module
 Import-Module -Name AzureAD
 
-# Connects to AzureAD
-Connect-AzureAD -Credential $Credential
+# Connects to AzureAD and prompts for credentials and MFA
+Connect-AzureAD
 
 # Grabs a list of all users and the required properties
 $Results = Get-AzureADUser -All $true | Select-Object UserPrincipalName,GivenName,Surname,JobTitle,PhysicalDeliveryOfficeName,Department,TelephoneNumber,Mobile,ObjectType,AccountEnabled,ObjectId
