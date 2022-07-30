@@ -11,6 +11,7 @@ $Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
 
 try {
     New-ItemProperty -Path $Path -Value 00000001 -PropertyType dword -Name "RunAsPPL"
+    Write-Host "RunAsPPL dword property was successfully set to 1"
     exit 0
 }
 catch{
