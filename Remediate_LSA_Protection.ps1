@@ -10,8 +10,8 @@
 $Path = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
 
 try {
-New-ItemProperty -Path $Path -Value 00000001 -PropertyType dword -Name "RunAsPPL"
-exit 0
+    New-ItemProperty -Path $Path -Value 00000001 -PropertyType dword -Name "RunAsPPL"
+    exit 0
 }
 catch{
     $errMsg = $_.Exception.Message
