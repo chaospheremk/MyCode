@@ -11,7 +11,7 @@
 $Path = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 
 try {
-    if ((Get-ItemProperty -Path $Path).SharedArrayBufferUnrestrictedAccessAllowed -ne 0) {
+    if ((Get-ItemProperty -Path $Path).RunAsPPL -ne 0) {
         Write-Host "SharedArrayBufferUnrestrictedAccessAllowed dword property is not set to 0"
         exit 1
     }
