@@ -3,20 +3,20 @@
 # Script Name:     Detect_Detect_IE_RestrictLegacyJscript.ps1
 # Description:     Determine whether following MS Security Guide registry value exists for
 #                  setting: Restrict legacy JScript execution for Office
-# Notes:           Part of the Microsoft Edge v103 baseline
+# Notes:           Part of the Microsoft 365 Apps for Enterprise baseline Restrict Legacy JScript settings
 #
 #=============================================================================================================================
 
 # Define Variables
 $Path = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE"
-$Processes = "excel.exe","mspub.exe","powerpnt.exe","onenote.exe","visio.exe","winproj.exe","winword.exe","outlook.exe","msaccess.exe"
+$Processes = "excel.exe", "mspub.exe", "powerpnt.exe", "onenote.exe", "visio.exe", "winproj.exe", "winword.exe", "outlook.exe", "msaccess.exe"
 
 try {
     if (!(Test-Path -Path $Path)) {
         $RemediationNeeded = $true
     }
     
-    foreach($Process in $Processes) {
+    foreach ($Process in $Processes) {
         if ((!(Test-Path -Path "$Path\$Process")) -or ((Get-ItemPropertyValue -Path "$Path\$Process") -ne 69632)) {
             $RemediationNeeded = $true
             Write-Host "$Process registry property either not found or not set to 69632"

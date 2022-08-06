@@ -1,9 +1,8 @@
 #=============================================================================================================================
 #
-# Script Name:     Remediate_Edge_SharedArrayBuffers_setting.ps1
-# Description:     Disable Microsoft Edge
-#                  setting: Specifies whether SharedArrayBuffers can be used in a non cross-origin-isolated context
-# Notes:           Creates dword property on registry key and sets value to 1
+# Script Name:     Remediate_IE_RestrictLegacyJscript.ps1
+# Description:     Create registry key, registry properties, and set their value.
+# Notes:           
 #
 #=============================================================================================================================
 
