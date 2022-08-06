@@ -42,29 +42,3 @@ catch {
     Write-Error $errMsg
     exit 1
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-try {
-    New-ItemProperty -Path $Path -Value 00000000 -PropertyType dword -Name "SharedArrayBufferUnrestrictedAccessAllowed"
-    Write-Host "SharedArrayBufferUnrestrictedAccessAllowed dword property was successfully set to 0"
-    exit 0
-}
-catch{
-    $errMsg = $_.Exception.Message
-    Write-Error $errMsg
-    exit 1
-}
