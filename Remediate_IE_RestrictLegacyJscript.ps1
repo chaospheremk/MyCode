@@ -11,7 +11,7 @@ $Path = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_
 $Processes = "excel.exe", "mspub.exe", "powerpnt.exe", "onenote.exe", "visio.exe", "winproj.exe", "winword.exe", "outlook.exe", "msaccess.exe"
 
 try {
-    if (!(Test-Path -Path $Path)) {
+    if (!(Test-Path -Path $Path -ErrorAction Ignore)) {
         New-Item -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl" -Name "FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE"
         Write-Host "Registry key: FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE was successfully created"
     }
@@ -20,12 +20,12 @@ try {
     }
 
     foreach ($Process in $Processes) {
-        if (!(Get-ItemProperty -Path $Path -Name $Process)) {
+        if (!(Get-ItemProperty -Path $Path -Name $Process -ErrorAction Ignore)) {
             New-ItemProperty -Path $Path -PropertyType dword -Name $Process -Value 69632
             Write-Host "$Process registry property successfully created and value set to 69632"
             exit 0
         }
-        elseif ((Get-ItemPropertyValue -Path $Path -Name $Process) -ne 69632) {
+        elseif ((Get-ItemPropertyValue -Path $Path -Name $Process -ErrorAction Ignore) -ne 69632) {
             Set-ItemProperty -Path $Path -Name $Process -Value 69632 -Force
             Write-Host "$Process registry property found and set to 69632"
             exit 0
