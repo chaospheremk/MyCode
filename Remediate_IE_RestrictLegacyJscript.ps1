@@ -6,35 +6,27 @@
 #
 #=============================================================================================================================
 
+#Set ErrorAction preference
+$ErrorActionPreference = "SilentlyContinue"
+
 # Define Variables
 $Path = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE"
-$Processes = "excel.exe", "mspub.exe", "powerpnt.exe", "onenote.exe", "visio.exe", "winproj.exe", "winword.exe", "outlook.exe", "msaccess.exe"
+$Processes = "excel.exe", "msaccess.exe", "mspub.exe", "onenote.exe", "outlook.exe", "powerpnt.exe", "visio.exe", "winproj.exe", "winword.exe"
 
 try {
-    if (!(Test-Path -Path $Path -ErrorAction Ignore)) {
-        New-Item -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl" -Name "FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE"
-        Write-Host "Registry key: FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE was successfully created"
-    }
-    else {
-        Write-Host "Registry key: FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE already exists"
+    if (!(Test-Path -Path $Path)) {
+        New-Item -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl" -Name "FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE" | Out-Null
     }
 
     foreach ($Process in $Processes) {
-        if (!(Get-ItemProperty -Path $Path -Name $Process -ErrorAction Ignore)) {
-            New-ItemProperty -Path $Path -PropertyType dword -Name $Process -Value 69632
-            Write-Host "$Process registry property successfully created and value set to 69632"
-            exit 0
+        if (!(Get-ItemProperty -Path $Path -Name $Process -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $Path -PropertyType dword -Name $Process -Value 69632 | Out-Null
         }
-        elseif ((Get-ItemPropertyValue -Path $Path -Name $Process -ErrorAction Ignore) -ne 69632) {
-            Set-ItemProperty -Path $Path -Name $Process -Value 69632 -Force
-            Write-Host "$Process registry property found and set to 69632"
-            exit 0
-        }
-        else {
-            Write-Host "$Process registry property found and was already set to 69632"
-            exit 0
+        elseif ((Get-ItemPropertyValue -Path $Path -Name $Process) -ne 69632) {
+            Set-ItemProperty -Path $Path -Name $Process -Value 69632 -Force | Out-Null
         }
     }
+    exit 0
 }
 catch {
     $errMsg = $_.Exception.Message

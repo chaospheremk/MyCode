@@ -7,36 +7,32 @@
 #
 #=============================================================================================================================
 
+# Set ErrorAction preference
+$ErrorActionPreference = "SilentlyContinue"
+
 # Define Variables
 $Path = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_RESTRICT_LEGACY_JSCRIPT_PER_SECURITY_ZONE"
-$Processes = "excel.exe", "mspub.exe", "powerpnt.exe", "onenote.exe", "visio.exe", "winproj.exe", "winword.exe", "outlook.exe", "msaccess.exe"
+$Processes = "excel.exe", "msaccess.exe", "mspub.exe", "onenote.exe", "outlook.exe", "powerpnt.exe", "visio.exe", "winproj.exe", "winword.exe"
 
 try {
     if (!(Test-Path -Path $Path)) {
-        $RemediationNeeded = $true
+        $ExitCode = 1
     }
-    
     foreach ($Process in $Processes) {
-        if ((!(Test-Path -Path "$Path\$Process")) -or ((Get-ItemPropertyValue -Path "$Path\$Process") -ne 69632)) {
-            $RemediationNeeded = $true
-            Write-Host "$Process registry property either not found or not set to 69632"
+        if ((!(Get-ItemProperty -Path $Path -Name $Process)) -or ((Get-ItemPropertyValue -Path $Path -Name $Process) -ne 69632)) {
+            $ExitCode = 1
         }
-        else {
-            Write-Host "$Process registry property found and set to 69632"
-        }
-    }
-
-    if ($RemediationNeeded) {
-        Write-Host "Either one of the required process keys doesn't exist or isn't set to 69632 - Remediation required"
-        exit 1
-    }
-    else {
-        Write-Host "All required process keys exist and are set to 69632"
-        exit 0
     }
 }
 catch {
     $errMsg = $_.Exception.Message
     Write-Error $errMsg
+    $ExitCode = 1
+}
+
+if ($ExitCode = 1) {
     exit 1
+}
+else {
+    exit 0
 }
