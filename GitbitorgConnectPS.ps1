@@ -34,7 +34,7 @@ Connect-ExchangeOnline
 # Enable auditing for a user's mailbox
 Set-Mailbox -Identity "User1" -AuditEnabled $true
 # Created retention labels, but they havent propagated to users. User needs to use label today
-Get-Mailbox -ResultSize unlimited -RecipientTypeDetails UserMailbox | %{ Start-ManagedFolderAssistant $_.UserPrincipalName }
+Get-Mailbox -ResultSize unlimited -RecipientTypeDetails UserMailbox | ForEach-Object { Start-ManagedFolderAssistant $_.UserPrincipalName }
 # Disconnect
 Disconnect-ExchangeOnline
 
