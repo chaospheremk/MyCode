@@ -1,0 +1,371 @@
+#Requires -Version 3.0
+
+<#
+    .SYNOPSIS
+        This script converts Global security groups to DomainLocal security groups.
+
+
+    .DESCRIPTION
+        This script converts Global security groups to DomainLocal security groups. It uses logic to take nested groups into account along with the
+        various rules that apply to converting a group's scope from one scope to another. The script parses through a security group's nested group
+        hierarchy to determine the order that groups need to be converted.
+
+
+    .INPUTS
+        This script relies on a CSV file to provide the list of groups to be converted. The CSV file requires one column that contains the group 
+        names with a single header of "Name".
+
+
+    .OUTPUTS
+        This script generates a separate set of CSV files per section of the script - a "Global to Universal" section and a "Universal to DomainLocal"
+        section. If no success results are generated, the SuccessArrayFinal_$Timestamp.csv file is not generated. If no error results are generated,
+        the ErrorsArrayFinal_$Timestamp.csv file is not generated.
+
+
+#>
+
+
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [String[]]
+    $ImportFilePath,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [String[]]
+    $ExportPath
+)
+
+
+Begin {
+    
+    $TimeStamp = get-date -Format yyyy_MM_dd_hh_mm_ss
+    $ImportFilePath = "C:\users\114435-adm\Desktop\CreateTestGroups.csv"
+    $ExportPath = "C:\users\114435-adm\Desktop\GroupConversionResults"
+    $G2USuccessArray = New-Object -TypeName "System.Collections.ArrayList"
+    $G2UGoBackArray = New-Object -TypeName "System.Collections.ArrayList"
+    $G2UErrorsArray = New-Object -TypeName "System.Collections.ArrayList"
+    $U2DLSuccessArray = New-Object -TypeName "System.Collections.ArrayList"
+    $U2DLGoBackArray = New-Object -TypeName "System.Collections.ArrayList"
+    $U2DLErrorsArray = New-Object -TypeName "System.Collections.ArrayList"    
+
+}
+
+Process {
+    
+    # SECTION: Convert Global to Universal
+    $ImportedGroups = Import-csv -Path $ImportFilePath | ForEach-Object {Get-AdGroup -Identity $_.Name | Select-Object Name, GroupScope, GroupCategory, DistinguishedName}
+
+    $Counter = 0
+
+    Do {
+        
+        $Counter += 1    
+        $NextRunArray = New-Object -TypeName "System.Collections.ArrayList"   
+        
+        foreach ($ImportedGroup in $ImportedGroups) {
+            
+            try {                                   
+                
+                if ($G2USuccessArray.DistinguishedName -notcontains $ImportedGroup.DistinguishedName) {
+                    
+                    if ($ImportedGroup.GroupScope -eq "Global"){
+                        
+                        $MemberOfGroups = Get-ADPrincipalGroupMembership -Identity $ImportedGroup.DistinguishedName
+                        
+                        if ($MemberOfGroups) {
+                            
+                            foreach ($MemberOfGroup in $MemberOfGroups) {                
+                                
+                                $NextRunGroupInfo = Get-AdGroup -Identity $MemberOfGroup.DistinguishedName | Select-Object Name, GroupScope, GroupCategory, DistinguishedName
+                                
+                                $NextRunGroup = [PSCustomObject] @{
+                                    Name = $NextRunGroupInfo.Name
+                                    GroupScope = $NextRunGroupInfo.GroupScope
+                                    GroupCategory = $NextRunGroupInfo.GroupCategory
+                                    DistinguishedName = $NextRunGroupInfo.DistinguishedName
+                                    IterationMissed = $Counter
+                                }
+
+                                $NextRunArray.Add($NextRunGroup) | Out-Null
+
+                                if ($G2UGoBackArray.DistinguishedName -contains $ImportedGroup.DistinguishedName){
+                                    
+                                    $G2UGoBackArray | Where-Object {$_.DistinguishedName -eq $ImportedGroup.DistinguishedName} | foreach {$_.GoBackIteration = $Counter}
+                                }
+                                else {
+                                    
+                                    $GoBackGroup = [PSCustomObject] @{
+                                        Name = $ImportedGroup.Name
+                                        GroupScope = $ImportedGroup.GroupScope
+                                        GroupCategory = $ImportedGroup.GroupCategory
+                                        DistinguishedName = $ImportedGroup.DistinguishedName
+                                        GoBackIteration = $Counter
+                                    }
+                                    
+                                    $G2UGoBackArray.Add($GoBackGroup) | Out-Null
+                                }
+                            }
+                        }
+                        else {
+                            
+                            Set-ADGroup -Identity $ImportedGroup.Name -GroupScope Universal -GroupCategory Security
+                            
+                            $SuccessGroup = [PSCustomObject] @{
+                                Name = $ImportedGroup.Name
+                                GroupScope = $ImportedGroup.GroupScope
+                                GroupCategory = $ImportedGroup.GroupCategory
+                                DistinguishedName = $ImportedGroup.DistinguishedName
+                                IterationType = "Success"
+                                IterationCompleted = $Counter
+                            }
+
+                            $G2USuccessArray.Add($SuccessGroup) | Out-Null
+                        }
+                    }
+                    else {
+                        
+                        $SuccessGroup = [PSCustomObject] @{
+                            Name = $ImportedGroup.Name
+                            GroupScope = $ImportedGroup.GroupScope
+                            GroupCategory = $ImportedGroup.GroupCategory
+                            DistinguishedName = $ImportedGroup.DistinguishedName
+                            IterationType = "Skipped: Not Global Group"
+                            IterationCompleted = $Counter
+                        }
+
+                        $G2USuccessArray.Add($SuccessGroup) | Out-Null
+                    }
+                }
+            }
+            catch {
+                
+                $ErrorScriptStackTrace = $_.ScriptStackTrace
+                $ErrorException = $_.Exception
+                $ErrorDetails = $_.ErrorDetails
+           
+                $ErrorGroup = [PSCustomObject] @{
+                    Name = $GetGroupInfo.Name
+                    GroupScope = $GetGroupInfo.GroupScope
+                    GroupCategory = $GetGroupInfo.GroupCategory
+                    DistinguishedName = $GetGroupInfo.DistinguishedName
+                    IterationType = "ImportedGroup Error"
+                    IterationNumber = $Counter
+                    ScriptStackTrace = $ErrorScriptStackTrace
+                    Exception = $ErrorException
+                    ErrorDetails = $ErrorDetails
+                }
+
+                $G2UErrorsArray.Add($ErrorGroup) | Out-Null
+            }
+        }
+
+        $ImportedGroups = $NextRunArray
+
+    } While ($NextRunArray)
+    
+    $G2UGoBackArray = $G2UGoBackArray | Sort-Object -Property GoBackIteration -Descending
+    
+    foreach ($GoBackGroup in $G2UGoBackArray) {
+        
+        try {
+            
+            Set-ADGroup -Identity $GoBackGroup.DistinguishedName -GroupScope Universal -GroupCategory Security
+            
+            $GoBackSuccessGroup = [PSCustomObject] @{
+                Name = $GoBackGroup.Name
+                GroupScope = $GoBackGroup.GroupScope
+                GroupCategory = $GoBackGroup.GroupCategory
+                DistinguishedName = $GoBackGroup.DistinguishedName
+                IterationType = "GoBack"
+                IterationCompleted = $GoBackGroup.GoBackIteration
+            }
+
+            $G2USuccessArray.Add($GoBackSuccessGroup) | Out-Null
+        }
+        catch {
+            
+            $ErrorScriptStackTrace = $_.ScriptStackTrace
+            $ErrorException = $_.Exception
+            $ErrorDetails = $_.ErrorDetails
+        
+            $ErrorGroup = [PSCustomObject] @{
+                Name = $GetGroupInfo.Name
+                GroupScope = $GetGroupInfo.GroupScope
+                GroupCategory = $GetGroupInfo.GroupCategory
+                DistinguishedName = $GetGroupInfo.DistinguishedName
+                IterationType = "Success"
+                IterationNumber = $Counter
+                ScriptStackTrace = $ErrorScriptStackTrace
+                Exception = $ErrorException
+                ErrorDetails = $ErrorDetails
+            }
+
+            $G2UErrorsArray.Add($ErrorGroup) | Out-Null
+        }
+    }
+    
+
+    # SECTION: Convert Universal to DomainLocal
+
+    $Counter = 0
+
+    Do {
+
+        $Counter += 1    
+        $NextRunArray = New-Object -TypeName "System.Collections.ArrayList"   
+        
+        foreach ($ImportedGroup in $ImportedGroups) {
+            
+            try {                                   
+                
+                if ($U2DLSuccessArray.DistinguishedName -notcontains $ImportedGroup.DistinguishedName) {
+                    
+                    if ($ImportedGroup.GroupScope -eq "Universal"){
+                        
+                        $MemberOfGroups = Get-ADPrincipalGroupMembership -Identity $ImportedGroup.DistinguishedName
+                       
+                        if ($MemberOfGroups) {
+                            
+                            foreach ($MemberOfGroup in $MemberOfGroups) {                
+                                
+                                $NextRunGroupInfo = Get-AdGroup -Identity $MemberOfGroup.DistinguishedName | Select-Object Name, GroupScope, GroupCategory, DistinguishedName
+                                
+                                $NextRunGroup = [PSCustomObject] @{
+                                    Name = $NextRunGroupInfo.Name
+                                    GroupScope = $NextRunGroupInfo.GroupScope
+                                    GroupCategory = $NextRunGroupInfo.GroupCategory
+                                    DistinguishedName = $NextRunGroupInfo.DistinguishedName
+                                    IterationMissed = $Counter
+                                }
+                                
+                                $NextRunArray.Add($NextRunGroup) | Out-Null
+                                
+                                if ($U2DLGoBackArray.DistinguishedName -contains $ImportedGroup.DistinguishedName){
+                                    
+                                    $U2DLGoBackArray | Where-Object {$_.DistinguishedName -eq $ImportedGroup.DistinguishedName} | foreach {$_.GoBackIteration = $Counter}
+                                }
+                                else {
+                                    
+                                    $GoBackGroup = [PSCustomObject] @{
+                                        Name = $ImportedGroup.Name
+                                        GroupScope = $ImportedGroup.GroupScope
+                                        GroupCategory = $ImportedGroup.GroupCategory
+                                        DistinguishedName = $ImportedGroup.DistinguishedName
+                                        GoBackIteration = $Counter
+                                    }
+
+                                    $U2DLGoBackArray.Add($GoBackGroup) | Out-Null
+                                }
+                            }
+                        }
+                        else {
+                            
+                            Set-ADGroup -Identity $ImportedGroup.Name -GroupScope DomainLocal -GroupCategory Security
+                            
+                            $SuccessGroup = [PSCustomObject] @{
+                                
+                                Name = $ImportedGroup.Name
+                                GroupScope = $ImportedGroup.GroupScope
+                                GroupCategory = $ImportedGroup.GroupCategory
+                                DistinguishedName = $ImportedGroup.DistinguishedName
+                                IterationType = "Success"
+                                IterationCompleted = $Counter
+                            }
+
+                            $U2DLSuccessArray.Add($SuccessGroup) | Out-Null
+                        }
+                    }
+                    else {
+                        
+                        $SuccessGroup = [PSCustomObject] @{
+                            Name = $ImportedGroup.Name
+                            GroupScope = $ImportedGroup.GroupScope
+                            GroupCategory = $ImportedGroup.GroupCategory
+                            DistinguishedName = $ImportedGroup.DistinguishedName
+                            IterationType = "Skipped: Not Universal Group"
+                            IterationCompleted = $Counter
+                        }
+                        
+                        $U2DLSuccessArray.Add($SuccessGroup) | Out-Null
+                    }
+                }
+            }
+            catch {
+                
+                $ErrorScriptStackTrace = $_.ScriptStackTrace
+                $ErrorException = $_.Exception
+                $ErrorDetails = $_.ErrorDetails
+
+                $ErrorGroup = [PSCustomObject] @{
+                    Name = $GetGroupInfo.Name
+                    GroupScope = $GetGroupInfo.GroupScope
+                    GroupCategory = $GetGroupInfo.GroupCategory
+                    DistinguishedName = $GetGroupInfo.DistinguishedName
+                    IterationType = "ImportedGroup Error"
+                    IterationNumber = $Counter
+                    ScriptStackTrace = $ErrorScriptStackTrace
+                    Exception = $ErrorException
+                    ErrorDetails = $ErrorDetails
+
+                }
+
+                $U2DLErrorsArray.Add($ErrorGroup) | Out-Null
+            }
+        }
+
+        $ImportedGroups = $NextRunArray
+
+    } While ($NextRunArray)
+
+    $U2DLGoBackArray = $U2DLGoBackArray | Sort-Object -Property GoBackIteration -Descending
+   
+    foreach ($GoBackGroup in $U2DLGoBackArray) {
+        
+        try {
+            
+            Set-ADGroup -Identity $GoBackGroup.DistinguishedName -GroupScope DomainLocal -GroupCategory Security
+                $GoBackSuccessGroup = [PSCustomObject] @{
+                Name = $GoBackGroup.Name
+                GroupScope = $GoBackGroup.GroupScope
+                GroupCategory = $GoBackGroup.GroupCategory
+                DistinguishedName = $GoBackGroup.DistinguishedName
+                IterationType = "GoBack"
+                IterationCompleted = $GoBackGroup.GoBackIteration
+            }
+            
+            $U2DLSuccessArray.Add($GoBackSuccessGroup) | Out-Null
+        }
+        catch {
+            
+            $ErrorScriptStackTrace = $_.ScriptStackTrace
+            $ErrorException = $_.Exception
+            $ErrorDetails = $_.ErrorDetails
+        
+            $ErrorGroup = [PSCustomObject] @{
+                Name = $GetGroupInfo.Name
+                GroupScope = $GetGroupInfo.GroupScope
+                GroupCategory = $GetGroupInfo.GroupCategory
+                DistinguishedName = $GetGroupInfo.DistinguishedName
+                IterationType = "Success"
+                IterationNumber = $Counter
+                ScriptStackTrace = $ErrorScriptStackTrace
+                Exception = $ErrorException
+                ErrorDetails = $ErrorDetails
+            }
+            
+            $U2DLErrorsArray.Add($ErrorGroup) | Out-Null
+        }
+    }
+}
+
+End {
+    
+    if ($G2USuccessArray) {$G2USuccessArray | Export-csv -Path "$ExportPath\G2USuccessArrayFinal_$Timestamp.csv" -NoTypeInformation}
+    if ($G2UErrorsArray) {$G2UErrorsArray | Export-csv -Path "$ExportPath\G2UErrorsArrayFinal_$Timestamp.csv" -NoTypeInformation}
+    if ($U2DLSuccessArray) {$U2DLSuccessArray | Export-csv -Path "$ExportPath\U2DLSuccessArrayFinal_$Timestamp.csv" -NoTypeInformation}
+    if ($U2DLErrorsArray) {$U2DLErrorsArray | Export-csv -Path "$ExportPath\U2DLErrorsArrayFinal_$Timestamp.csv" -NoTypeInformation}
+
+}
