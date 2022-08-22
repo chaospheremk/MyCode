@@ -27,13 +27,17 @@
 
 [CmdletBinding()]
 param (
+    # This is a string parameter that should contain the full file path to the CSV input file containing the list of groups to be converted.
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [Alias("Input")]
     [String[]]
     $ImportFilePath,
 
+    # This is a string parameter that should contain the folder path to where the output CSV files should be generated.
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [Alias("Output")]
     [String[]]
     $ExportPath
 )
@@ -41,9 +45,11 @@ param (
 
 Begin {
     
+    # Uncomment the following two lines if you'd like to manually set these two variables.
+#    $ImportFilePath = "C:\users\114435-adm\Desktop\CreateTestGroups.csv"
+#    $ExportPath = "C:\users\114435-adm\Desktop\GroupConversionResults"
+    
     $TimeStamp = get-date -Format yyyy_MM_dd_hh_mm_ss
-    $ImportFilePath = "C:\users\114435-adm\Desktop\CreateTestGroups.csv"
-    $ExportPath = "C:\users\114435-adm\Desktop\GroupConversionResults"
     $G2USuccessArray = New-Object -TypeName "System.Collections.ArrayList"
     $G2UGoBackArray = New-Object -TypeName "System.Collections.ArrayList"
     $G2UErrorsArray = New-Object -TypeName "System.Collections.ArrayList"
