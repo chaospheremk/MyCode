@@ -61,19 +61,19 @@ Try {
 	##* VARIABLE DECLARATION
 	##*===============================================
 	## Variables: Application
-	[string]$appVendor = ''
-	[string]$appName = ''
-	[string]$appVersion = ''
-	[string]$appArch = ''
+	[string]$appVendor = 'PS-Microsoft'
+	[string]$appName = 'Surface Pro 8 Drivers'
+	[string]$appVersion = '22.073.30047.0'
+	[string]$appArch = 'x64'
 	[string]$appLang = 'EN'
 	[string]$appRevision = '01'
 	[string]$appScriptVersion = '1.0.0'
-	[string]$appScriptDate = 'XX/XX/20XX'
-	[string]$appScriptAuthor = '<author name>'
+	[string]$appScriptDate = '11/05/2022'
+	[string]$appScriptAuthor = 'Doug Johnson'
 	##*===============================================
 	## Variables: Install Titles (Only set here to override defaults set by the toolkit)
 	[string]$installName = ''
-	[string]$installTitle = ''
+	[string]$installTitle = 'Surface Pro 8 Drivers'
 
 	##* Do not modify section below
 	#region DoNotModify
@@ -114,13 +114,15 @@ Try {
 		##*===============================================
 		##* PRE-INSTALLATION
 		##*===============================================
+		[string]$AppMSIName	= 'SurfacePro8_Win11_22000_22.073.30047.0.msi' # actual name of the MSI in the \Files folder
+		[string]$AppMSICode	= '{2A960A65-5C21-4044-8FE9-0F248E5AFF6D}' #The MSI's PRODUCTCODE (Use Orca and look in Property table)
 		[string]$installPhase = 'Pre-Installation'
 
 		## Show Welcome Message, close Internet Explorer if required, allow up to 3 deferrals, verify there is enough disk space to complete the install, and persist the prompt
-		Show-InstallationWelcome -CloseApps 'iexplore' -AllowDefer -DeferTimes 3 -CheckDiskSpace -PersistPrompt
+		# Show-InstallationWelcome -AllowDefer -DeferTimes 3 -CheckDiskSpace -PersistPrompt -Silent
 
 		## Show Progress Message (with the default message)
-		Show-InstallationProgress
+		# Show-InstallationProgress
 
 		## <Perform Pre-Installation tasks here>
 
@@ -137,7 +139,8 @@ Try {
 		}
 
 		## <Perform Installation tasks here>
-
+		New-Folder -Path "C:\installogs"
+		Execute-MSI -Action 'Install' -Path $AppMSIName -Parameters '/QN' -LogName "${AppMSIName}_MSI"
 
 		##*===============================================
 		##* POST-INSTALLATION
@@ -147,7 +150,7 @@ Try {
 		## <Perform Post-Installation tasks here>
 
 		## Display a message at the end of the install
-		If (-not $useDefaultMsi) { Show-InstallationPrompt -Message 'You can customize text to appear at the end of an install or remove it completely for unattended installations.' -ButtonRightText 'OK' -Icon Information -NoWait }
+		If (-not $useDefaultMsi) { }#Show-InstallationPrompt -Message 'You can customize text to appear at the end of an install or remove it completely for unattended installations.' -ButtonRightText 'OK' -Icon Information -NoWait }
 	}
 	ElseIf ($deploymentType -ieq 'Uninstall')
 	{
@@ -157,10 +160,10 @@ Try {
 		[string]$installPhase = 'Pre-Uninstallation'
 
 		## Show Welcome Message, close Internet Explorer with a 60 second countdown before automatically closing
-		Show-InstallationWelcome -CloseApps 'iexplore' -CloseAppsCountdown 60
+		#Show-InstallationWelcome -CloseApps 'iexplore' -CloseAppsCountdown 60
 
 		## Show Progress Message (with the default message)
-		Show-InstallationProgress
+		# Show-InstallationProgress
 
 		## <Perform Pre-Uninstallation tasks here>
 
@@ -177,7 +180,7 @@ Try {
 		}
 
 		# <Perform Uninstallation tasks here>
-
+		Execute-MSI -Action 'Uninstall' -Path $AppMSICode -Parameters '/QN' -LogName "${AppMSIName}_MSI"
 
 		##*===============================================
 		##* POST-UNINSTALLATION
