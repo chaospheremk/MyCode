@@ -12,7 +12,7 @@ services:
         ipv4_address: 192.168.50.253
     environment:
       - CF_API_EMAIL=doug@dougjohnson.me
-      - CF_DNS_API_TOKEN=lkHEEwjdLKtcecUH6CsWKlpEDTqhPto0amM316RH
+      - CF_DNS_API_TOKEN=$APIKEY
       # - CF_API_KEY=a798be180f83c50c72209f717032b2733bece
     volumes:
       - /etc/localtime:/etc/localtime:ro
