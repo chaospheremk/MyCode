@@ -64,7 +64,7 @@ Write-Host "App registration for Microsoft365DSC was added successfully" -Foregr
 Write-Host "Sharepoint permissions added to Microsoft365DSC service principal" -ForegroundColor Green
 
 # Add previously compiled Graph permissions to service principal
-Write-Host "Adding required Graph permissions to Microsoft365DSC service princiapl..." -ForegroundColor Yellow
+Write-Host "Adding required Graph permissions to Microsoft365DSC service principal..." -ForegroundColor Yellow
 Update-M365DSCAzureAdApplication -ApplicationName 'Microsoft365DSC' -Permissions $PermList -AdminConsent -Type Certificate -CertificatePath c:\temp\Microsoft365DSC.cer
 Write-Host "Graph permissions added to Microsoft365DSC service principal" -ForegroundColor Green
 
