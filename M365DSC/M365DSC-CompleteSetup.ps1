@@ -20,6 +20,7 @@ if ($InstalledModules.Name -notcontains "Microsoft365DSC") {
     Write-Host "Microsoft365DSC dependencies have been updated." -ForegroundColor Green
 }
 
+# Due to bug in M365DSC module, Az.Resources module is not recognized as a required dependency. Must add manually.
 Write-Host "Checking for the Az.Resources Module..." -ForegroundColor Yellow
 if ($InstalledModules.Name -notcontains "Az.Resources") {
     Write-Host "Az.Resources module is not installed." -ForegroundColor Yellow
