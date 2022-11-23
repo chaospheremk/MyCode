@@ -1,48 +1,49 @@
 Function Install-M365DSCCertAuth {
     [CmdletBinding()]
     param(
-        [ValidateSet("Commercial","GCC","GCCHigh","DoD","China","Germany")]
+        [ValidateSet("Commercial", "GCC", "GCCHigh", "DoD", "China", "Germany")]
         [String]
         $CloudEnvironment,
         [String]
         $ExportPath,
         [String]
-        $CertPath
+        $CertPath,
+        [String]
+        $TenantId
     )
     # PREREQS
     # You must run this script interactively as there are a number of interactive prompts you must use to sign in with a Global Administrator
 
-    switch ($CloudEnvironment)
-    {
-        Commercial
-        {
+    switch ($CloudEnvironment) {
+        Commercial {
             $PnPEnvironment = "Production"
             $ExchangeEnvironment = "O365Default"
+            $GraphEnvironment = "Global"
         }
-        GCC
-        {
+        GCC {
             $PnPEnvironment = "USGovernment"
             $ExchangeEnvironment = "O365Default"
+            $GraphEnvironment = "USGov"
         }
-        GCCHigh
-        {
+        GCCHigh {
             $PnPEnvironment = "USGovernmentHigh"
             $ExchangeEnvironment = "O365USGovGCCHigh"
+            $GraphEnvironment = "USGov"
         }
-        DoD
-        {
+        DoD {
             $PnPEnvironment = "USGovernmentDoD"
             $ExchangeEnvironment = "O365USGovDoD"
+            $GraphEnvironment = "USGovDoD"
         }
-        China
-        {
+        China {
             $PnPEnvironment = "China"
             $ExchangeEnvironment = "O365China"
+            $GraphEnvironment = "China"
         }
-        Germany
-        {
+        Germany {
             $PnPEnvironment = "Germany"
             $ExchangeEnvironment = "O365GermanyCloud"
+            $GraphEnvironment = "Global"
         }
 
     }
@@ -108,18 +109,31 @@ Function Install-M365DSCCertAuth {
         Write-Host "$ExportPath folder already exists." -ForegroundColor Green
     }
 
+    # Create $ExportPath folder if it doesn't exist
+    Write-Host "Checking for $CertPath folder..." -ForegroundColor Yellow
+    if (-NOT (Test-Path $CertPath)) {
+        Write-Host "$CertPath folder does not exist" -ForegroundColor Yellow
+        Write-Host "Creating $CertPath folder..." -ForegroundColor Yellow
+        New-Item -Path $CertPath -ItemType "directory"
+        Write-Host "$CertPath folder was successfully created." -ForegroundColor Green
+    }
+    else {
+        Write-Host "$CertPath folder already exists." -ForegroundColor Green
+    }
+
     # Enter a password for the .pfx certificate file generated in the next step
     $CertPassword = (Get-Credential -Message "Please enter a password for the .pfx file generated in the next step." -UserName "Enter password below").Password
 
     # Create initial App registration via PnP module including certificate creation. Add required Sharepoint permissions to service principal
     Write-Host "Creating AzureAD App Registration called Microsoft365DSC and adding required Sharepoint permissions..." -ForeGroundColor Yellow
-    Register-PnPAzureADApp -ApplicationName "Microsoft365DSC" -Tenant dougjohnsonme.onmicrosoft.com -Interactive -AzureEnvironment $PnPEnvironment -SharePointApplicationPermissions Sites.FullControl.All -GraphApplicationPermissions Group.ReadWrite.All -OutPath $CertPath -CertificatePassword $CertPassword
+    Register-PnPAzureADApp -ApplicationName "Microsoft365DSC" -Tenant $TenantId -Interactive -AzureEnvironment $PnPEnvironment -SharePointApplicationPermissions Sites.FullControl.All -GraphApplicationPermissions Group.ReadWrite.All -OutPath $CertPath -CertificatePassword $CertPassword
     Write-Host "App registration for Microsoft365DSC was added successfully" -ForegroundColor Green
     Write-Host "Sharepoint permissions added to Microsoft365DSC service principal" -ForegroundColor Green
 
     # Install generated certificate
     Write-Host "Installing Microsoft365DSC certificate..." -ForegroundColor Yellow
-    $Thumbprint = (Import-PfxCertificate -FilePath "$CertPath\Microsoft365DSC.pfx" -CertStoreLocation Cert:\LocalMachine\My -Password $CertPassword).Thumbprint
+    # $CertificateThumbprint = (Import-PfxCertificate -FilePath "$CertPath\Microsoft365DSC.pfx" -CertStoreLocation Cert:\LocalMachine\My -Password $CertPassword).Thumbprint
+    Import-PfxCertificate -FilePath "$CertPath\Microsoft365DSC.pfx" -CertStoreLocation Cert:\LocalMachine\My -Password $CertPassword
     Write-Host "Microsoft365DSC certificate successfully installed." -ForegroundColor Green
 
     # Add previously compiled Graph permissions to service principal
@@ -144,7 +158,10 @@ Function Install-M365DSCCertAuth {
 
     # Add Exchange Organization Management role group to service principal. Interactive logon.
     Connect-ExchangeOnline -ExchangeEnvironmentName $ExchangeEnvironment
-
+    Connect-MgGraph -Environment $GraphEnvironment -Scopes "Application.ReadWrite.All", "User.ReadWrite.All", "Group.ReadWrite.All", "GroupMember.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
+    $ExchangeServicePrincipal = Get-MgServicePrincipal | Where-Object DisplayName -eq "Microsoft365DSC"
+    $ServiceId = $ExchangeServicePrincipal.Id
+    $AppId = $ExchangeServicePrincipal.AppId
     # Get all Organization Management Roles
     <# $OrgManRoles = (Get-RoleGroup -Identity "Organization Management").Roles
     $CompManRoles = (Get-RoleGroup -Identity "Compliance Management").Roles
@@ -166,20 +183,36 @@ Function Install-M365DSCCertAuth {
 
     # The AzureAD service principal must be duplicated in the ExchangeOnline module to be able to add it to a role group
     Write-Host "Creating service principal for ExchangeOnline module..." -ForegroundColor Yellow
-    New-ServicePrincipal -DisplayName "Microsoft365DSC" -AppId a91f7b34-d533-4351-bdb8-57dcf77515a8 -ServiceId f15f6f44-f5b5-4427-9763-efb7ee64464f
+    New-ServicePrincipal -DisplayName "Microsoft365DSC" -AppId $AppId -ServiceId $ServiceId
     Write-Host "Service principal for ExchangeOnline module was successfully created." -ForegroundColor Green
 
     # Add newly duplicated service principal to the two required EXO Role Groups
-    Write-Host "Adding service principal to required roles..." -ForegroundColor Yellow
+    Write-Host "Adding service principal to required Exchange Online roles..." -ForegroundColor Yellow
     Update-RoleGroupMember -Identity "Organization Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
     Update-RoleGroupMember -Identity "Compliance Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
-    Write-Host "Service principal required roles were added successfully." -ForegroundColor Green
+    Write-Host "Service principal required Exchange Online roles were added successfully." -ForegroundColor Green
+    Disconnect-ExchangeOnline -Confirm:$false
+    # Get-M365DSCCompiledPermissionList -ResourceNameList @("TeamsCallingPolicy", "TeamsChannel", "TeamsChannelsPolicy", "TeamsChannelTab", "TeamsClientConfiguration", "TeamsDialInConferencingTenantSettings", "TeamsEmergencyCallingPolicy", "TeamsEmergencyCallRoutingPolicy", "TeamsEventsPolicy", "TeamsFederationConfiguration", "TeamsGuestCallingConfiguration", "TeamsGuestMeetingConfiguration", "TeamsGuestMessagingConfiguration", "TeamsMeetingBroadcastConfiguration", "TeamsMeetingBroadcastPolicy", "TeamsMeetingConfiguration", "TeamsMeetingPolicy", "TeamsMessagingPolicy", "TeamsOnlineVoicemailPolicy", "TeamsOnlineVoicemailUserSettings", "TeamsOnlineVoiceUser", "TeamsPstnUsage", "TeamsTeam", "TeamsTenantDialPlan", "TeamsUpdateManagementPolicy", "TeamsUpgradeConfiguration", "TeamsUpgradePolicy", "TeamsUser", "TeamsUserCallingSettings", "TeamsVoiceRoute", "TeamsVoiceRoutingPolicy") -Source 'Teams' -PermissionsType 'Application'
 
-    Get-M365DSCCompiledPermissionList -ResourceNameList @("TeamsCallingPolicy", "TeamsChannel", "TeamsChannelsPolicy", "TeamsChannelTab", "TeamsClientConfiguration", "TeamsDialInConferencingTenantSettings", "TeamsEmergencyCallingPolicy", "TeamsEmergencyCallRoutingPolicy", "TeamsEventsPolicy", "TeamsFederationConfiguration", "TeamsGuestCallingConfiguration", "TeamsGuestMeetingConfiguration", "TeamsGuestMessagingConfiguration", "TeamsMeetingBroadcastConfiguration", "TeamsMeetingBroadcastPolicy", "TeamsMeetingConfiguration", "TeamsMeetingPolicy", "TeamsMessagingPolicy", "TeamsOnlineVoicemailPolicy", "TeamsOnlineVoicemailUserSettings", "TeamsOnlineVoiceUser", "TeamsPstnUsage", "TeamsTeam", "TeamsTenantDialPlan", "TeamsUpdateManagementPolicy", "TeamsUpgradeConfiguration", "TeamsUpgradePolicy", "TeamsUser", "TeamsUserCallingSettings", "TeamsVoiceRoute", "TeamsVoiceRoutingPolicy") -Source 'Teams' -PermissionsType 'Application'
+    
+    # Write-Host "Ensure that you add the service principal to the Teams Administrator role in the Azure portal before exporting Teams settings" -ForegroundColor Red
 
+    $user = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft365DSC'"
+
+    $requiredRoleTemplates = Get-MgDirectoryRoleTemplate | Where-Object Id -in "69091246-20e8-4a56-aa4d-066075b2a7a8"
+    $aadRoles = Get-MgDirectoryRole
+
+    $requiredRoleTemplates |
+    ForEach-Object {
+        $aadRoles | Where-Object RoleTemplateId -eq $_.Id
+    } | ForEach-Object {
+        $Members = Get-MgDirectoryRoleMember -DirectoryRoleId $_.Id
+        if ($User.Id -notin $Members.Id) {
+            Write-Verbose "Adding user to Azure AD role '$($_.DisplayName)'" -Verbose
+            New-MgDirectoryRoleMemberByRef -DirectoryRoleId $_.Id -BodyParameter @{"@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
+        }
+    }
+    Disconnect-MgGraph
+    Write-Host "Service principal required Teams Administrator role was added successfully." -ForegroundColor Green
     Write-Host "Installation and service principal configuration is complete" -ForegroundColor Green
-    Write-Host "Ensure that you add the service principal to the Teams Administrator role in the Azure portal before exporting Teams settings" -ForegroundColor Red
 }
-
-
-Export-M365DSCConfiguration -LaunchWebUI
