@@ -48,6 +48,9 @@ Function Install-M365DSCCertAuth {
 
     }
 
+    # Enter a password for the .pfx certificate file generated for the self-signed certificate.
+    $CertPassword = (Get-Credential -Message "Please enter a password for the .pfx file generated for self-signed certificate." -UserName "Enter password below").Password
+
     # Install Microsoft365DSC if it is not installed. Once installed, update Microsoft365DSC module along with dependencies.
     $InstalledModules = Get-InstalledModule
 
@@ -116,9 +119,6 @@ Function Install-M365DSCCertAuth {
     else {
         Write-Host "$CertPath folder already exists." -ForegroundColor Green
     }
-
-    # Enter a password for the .pfx certificate file generated in the next step
-    $CertPassword = (Get-Credential -Message "Please enter a password for the .pfx file generated in the next step." -UserName "Enter password below").Password
 
     # Create initial App registration via PnP module including certificate creation. Add required Sharepoint permissions to service principal
     Write-Host "Creating AzureAD App Registration called Microsoft365DSC and adding required Sharepoint permissions..." -ForeGroundColor Yellow
