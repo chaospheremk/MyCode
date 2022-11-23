@@ -55,7 +55,7 @@ Function Install-M365DSCCertAuth {
     if ($InstalledModules.Name -notcontains "Microsoft365DSC") {
         Write-Host "Microsoft365DSC module is not installed." -ForegroundColor Yellow
         Write-Host "Installing Microsoft365DSC module..." -ForegroundColor Yellow
-        Install-Module Microsoft365DSC -Force
+        Install-Module Microsoft365DSC -Confirm:$false
         Write-Host "Microsoft365DSC module was successfully installed." -ForegroundColor Green
         Write-Host "Updating Microsoft365DSC dependencies..." -ForegroundColor Yellow
         Update-M365DSCDependencies
@@ -64,7 +64,7 @@ Function Install-M365DSCCertAuth {
     else {
         Write-Host "Microsoft365DSC module is installed." -ForegroundColor Green
         Write-Host "Updating Microsoft365DSC module..." -ForegroundColor Yellow
-        Update-Module Microsoft365DSC
+        Update-Module Microsoft365DSC -Force
         Write-Host "Microsoft365DSC module was successfully updated." -ForegroundColor Green
         Write-Host "Updating Microsoft365DSC dependencies..." -ForegroundColor Yellow
         Update-M365DSCDependencies
@@ -85,11 +85,7 @@ Function Install-M365DSCCertAuth {
 
     Write-Host "Getting required Microsoft365DSC permissions..." -ForegroundColor Yellow
     $AllPermissions = Get-M365DSCCompiledPermissionList -ResourceNameList (Get-M365DSCAllResources)
-    $UpdatePermissions = $AllPermissions.UpdatePermissions | Where-Object { $_ -notlike "Tasks*" }
-    # Due to bug in M365DSC module, must manually add the below two permissions as there's a typo in the source code
-    $UpdatePermissions += "Tasks.ReadWrite.All"
-    $UpdatePermissions += "Tasks.Read.All"
-    #$UpdatePermissions = (Get-M365DSCCompiledPermissionList -ResourceNameList (Get-M365DSCAllResources)).UpdatePermissions
+    $UpdatePermissions = $AllPermissions.UpdatePermissions
 
     $PermList = @()
     foreach ($UpdatePermission in $UpdatePermissions) {
@@ -137,66 +133,14 @@ Function Install-M365DSCCertAuth {
     Write-Host "Microsoft365DSC certificate successfully installed." -ForegroundColor Green
 
     # Add previously compiled Graph permissions to service principal
-    Write-Host "Adding required Graph permissions to Microsoft365DSC service principal..." -ForegroundColor Yellow
+    Write-Host "Adding required Graph permissions to service principal..." -ForegroundColor Yellow
     Update-M365DSCAzureAdApplication -ApplicationName 'Microsoft365DSC' -Permissions $PermList -AdminConsent -Type Certificate -CertificatePath "$CertPath\Microsoft365DSC.cer"
-    Write-Host "Graph permissions added to Microsoft365DSC service principal" -ForegroundColor Green
-
-    <# $ExchangePerms = @("EXOAcceptedDomain", "EXOActiveSyncDeviceAccessRule", "EXOAddressBookPolicy", "EXOAddressList", "EXOAntiPhishPolicy", "EXOAntiPhishRule", `
-            "EXOApplicationAccessPolicy", "EXOAtpPolicyForO365", "EXOAuthenticationPolicy", "EXOAuthenticationPolicyAssignment", "EXOAvailabilityAddressSpace", "EXOAvailabilityConfig", `
-            "EXOCASMailboxPlan", "EXOCASMailboxSettings", "EXOClientAccessRule", "EXODataClassification", "EXODataEncryptionPolicy", "EXODistributionGroup", "EXODkimSigningConfig", `
-            "EXOEmailAddressPolicy", "EXOGlobalAddressList", "EXOHostedConnectionFilterPolicy", "EXOHostedContentFilterPolicy", "EXOHostedContentFilterRule", `
-            "EXOHostedOutboundSpamFilterPolicy", "EXOHostedOutboundSpamFilterRule", "EXOInboundConnector", "EXOIntraOrganizationConnector", "EXOIRMConfiguration", "EXOJournalRule", `
-            "EXOMailboxPlan", "EXOMailboxSettings", "EXOMailContact", "EXOMailTips", "EXOMalwareFilterPolicy", "EXOMalwareFilterRule", "EXOManagementRole", "EXOManagementRoleAssignment", `
-            "EXOMessageClassification", "EXOMobileDeviceMailboxPolicy", "EXOOfflineAddressBook", "EXOOMEConfiguration", "EXOOnPremisesOrganization", "EXOOrganizationConfig", `
-            "EXOOrganizationRelationship", "EXOOutboundConnector", "EXOOwaMailboxPolicy", "EXOPartnerApplication", "EXOPerimeterConfiguration", "EXOPolicyTipConfig", "EXOQuarantinePolicy", `
-            "EXORemoteDomain", "EXOResourceConfiguration", "EXORoleAssignmentPolicy", "EXOSafeAttachmentPolicy", "EXOSafeAttachmentRule", "EXOSafeLinksPolicy", "EXOSafeLinksRule", `
-            "EXOSharedMailbox", "EXOSharingPolicy", "EXOTransportConfig", "EXOTransportRule"
-    )
-
-    $ExchangeUpdatePerms = Get-M365DSCCompiledPermissionList -ResourceNameList $ExchangePerms -Source 'Exchange' -PermissionsType 'Application'
-    $ExchangeRequiredRoles = $ExchangeUpdatePerms.RequiredRoles #>
+    Write-Host "Required Graph permissions were successfully added to service principal." -ForegroundColor Green
 
     # Add Exchange Organization Management role group to service principal. Interactive logon.
-    Connect-ExchangeOnline -ExchangeEnvironmentName $ExchangeEnvironment
-    Connect-MgGraph -Environment $GraphEnvironment -Scopes "Application.ReadWrite.All", "User.ReadWrite.All", "Group.ReadWrite.All", "GroupMember.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory"
-    $ExchangeServicePrincipal = Get-MgServicePrincipal | Where-Object DisplayName -eq "Microsoft365DSC"
-    $ServiceId = $ExchangeServicePrincipal.Id
-    $AppId = $ExchangeServicePrincipal.AppId
-    # Get all Organization Management Roles
-    <# $OrgManRoles = (Get-RoleGroup -Identity "Organization Management").Roles
-    $CompManRoles = (Get-RoleGroup -Identity "Compliance Management").Roles
-
-    foreach ($ExchangeRequiredRole in $ExchangeRequiredRoles) {
-        if ($OrgManRoles -contains $ExchangeRequiredRole) {
-            Write-Host "Required role $ExchangeRequiredRole exists in OrgManRoles" -ForegroundColor Green
-        } else {
-            if ($CompManRoles -contains $ExchangeRequiredRole) {
-                Write-Host "Required role $ExchangeRequiredRole exists in CompManRoles" -ForegroundColor Green
-            } else {
-                Write-Host "Required role $ExchangeRequiredRole does not exist in OrgManRoles or CompManRoles" -ForegroundColor Red
-            }
-        }
-    }
-
-    Get-M365DSCCompiledPermissionList -ResourceNameList @('EXOAcceptedDomain') -Source 'Exchange' -PermissionsType 'Application' #>
-    #########
-
-    # The AzureAD service principal must be duplicated in the ExchangeOnline module to be able to add it to a role group
-    Write-Host "Creating service principal for ExchangeOnline module..." -ForegroundColor Yellow
-    New-ServicePrincipal -DisplayName "Microsoft365DSC" -AppId $AppId -ServiceId $ServiceId
-    Write-Host "Service principal for ExchangeOnline module was successfully created." -ForegroundColor Green
-
-    # Add newly duplicated service principal to the two required EXO Role Groups
-    Write-Host "Adding service principal to required Exchange Online roles..." -ForegroundColor Yellow
-    Update-RoleGroupMember -Identity "Organization Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
-    Update-RoleGroupMember -Identity "Compliance Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
-    Write-Host "Service principal required Exchange Online roles were added successfully." -ForegroundColor Green
-    Disconnect-ExchangeOnline -Confirm:$false
-    # Get-M365DSCCompiledPermissionList -ResourceNameList @("TeamsCallingPolicy", "TeamsChannel", "TeamsChannelsPolicy", "TeamsChannelTab", "TeamsClientConfiguration", "TeamsDialInConferencingTenantSettings", "TeamsEmergencyCallingPolicy", "TeamsEmergencyCallRoutingPolicy", "TeamsEventsPolicy", "TeamsFederationConfiguration", "TeamsGuestCallingConfiguration", "TeamsGuestMeetingConfiguration", "TeamsGuestMessagingConfiguration", "TeamsMeetingBroadcastConfiguration", "TeamsMeetingBroadcastPolicy", "TeamsMeetingConfiguration", "TeamsMeetingPolicy", "TeamsMessagingPolicy", "TeamsOnlineVoicemailPolicy", "TeamsOnlineVoicemailUserSettings", "TeamsOnlineVoiceUser", "TeamsPstnUsage", "TeamsTeam", "TeamsTenantDialPlan", "TeamsUpdateManagementPolicy", "TeamsUpgradeConfiguration", "TeamsUpgradePolicy", "TeamsUser", "TeamsUserCallingSettings", "TeamsVoiceRoute", "TeamsVoiceRoutingPolicy") -Source 'Teams' -PermissionsType 'Application'
-
+    $RequiredScopes = @("Application.ReadWrite.All", "User.ReadWrite.All", "Group.ReadWrite.All", "GroupMember.ReadWrite.All", "Directory.ReadWrite.All", "RoleManagement.ReadWrite.Directory")
+    Connect-MgGraph -Environment $GraphEnvironment -Scopes $RequiredScopes
     
-    # Write-Host "Ensure that you add the service principal to the Teams Administrator role in the Azure portal before exporting Teams settings" -ForegroundColor Red
-
     $user = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft365DSC'"
 
     $requiredRoleTemplates = Get-MgDirectoryRoleTemplate | Where-Object Id -in "69091246-20e8-4a56-aa4d-066075b2a7a8"
@@ -212,7 +156,28 @@ Function Install-M365DSCCertAuth {
             New-MgDirectoryRoleMemberByRef -DirectoryRoleId $_.Id -BodyParameter @{"@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($user.Id)" }
         }
     }
+    
+    $ExchangeServicePrincipal = Get-MgApplication | Where-Object DisplayName -eq "Microsoft365DSC"
+    $ServiceId = $ExchangeServicePrincipal.Id
+    $AppId = $ExchangeServicePrincipal.AppId
+
+    Write-Host "Required Teams Administrator role was added successfully to service principal." -ForegroundColor Green
+
     Disconnect-MgGraph
-    Write-Host "Service principal required Teams Administrator role was added successfully." -ForegroundColor Green
+
+    Connect-ExchangeOnline -ExchangeEnvironmentName $ExchangeEnvironment
+
+    # The AzureAD service principal must be duplicated in the ExchangeOnline module to be able to add it to a role group
+    Write-Host "Creating service principal for ExchangeOnline module..." -ForegroundColor Yellow
+    New-ServicePrincipal -DisplayName "Microsoft365DSC" -AppId $AppId -ServiceId $ServiceId
+    Write-Host "Service principal for ExchangeOnline module was successfully created." -ForegroundColor Green
+
+    # Add newly duplicated service principal to the two required EXO Role Groups
+    Write-Host "Adding service principal to required Exchange Online roles..." -ForegroundColor Yellow
+    Update-RoleGroupMember -Identity "Organization Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
+    Update-RoleGroupMember -Identity "Compliance Management" -Members @{Add = "Microsoft365DSC" } -Confirm:$false
+    Write-Host "Required Exchange Online roles were successfully added to service principal." -ForegroundColor Green
+    Disconnect-ExchangeOnline -Confirm:$false
+
     Write-Host "Installation and service principal configuration is complete" -ForegroundColor Green
 }
