@@ -1,0 +1,37 @@
+# Ensure the Az module is installed
+Install-Module -Name Az -AllowClobber -Scope CurrentUser -Force
+
+# Login to your Azure account
+Login-AzAccount
+
+# Collect Role Assignments
+$roleAssignments = @()
+
+# Management Group Level
+$mgList = Get-AzManagementGroup
+foreach ($mg in $mgList) {
+    $roleAssignments += Get-AzRoleAssignment -Scope "/providers/Microsoft.Management/managementGroups/$($mg.Id)"
+}
+
+# Subscription Level
+$subList = Get-AzSubscription
+foreach ($sub in $subList) {
+    $roleAssignments += Get-AzRoleAssignment -Scope "/subscriptions/$($sub.Id)"
+    
+    # Resource Group Level
+    $rgList = Get-AzResourceGroup -SubscriptionId $sub.Id
+    foreach ($rg in $rgList) {
+        $roleAssignments += Get-AzRoleAssignment -Scope "/subscriptions/$($sub.Id)/resourceGroups/$($rg.ResourceGroupName)"
+        
+        # Resource Level
+        $resourceList = Get-AzResource -ResourceGroupName $rg.ResourceGroupName -SubscriptionId $sub.Id
+        foreach ($resource in $resourceList) {
+            $roleAssignments += Get-AzRoleAssignment -Scope $resource.Id
+        }
+    }
+}
+
+# Export to CSV
+$roleAssignments | Export-Csv -Path 'C:\path\to\your\file.csv' -NoTypeInformation
+
+# Note: Make sure to replace 'C:\path\to\your\file.csv' with your desired path
