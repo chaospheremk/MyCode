@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "connections_AzureVPN_name": {
+            "value": "AzureVPN"
+        },
+        "virtualNetworks_bastion_vnet_name": {
+            "value": "bastion-vnet"
+        },
+        "localNetworkGateways_HomeNetwork_name": {
+            "value": "HomeNetwork"
+        },
+        "publicIPAddresses_bastion_vnet_gw_pip_name": {
+            "value": "bastion-vnet-gw-pip"
+        },
+        "virtualNetworkGateways_bastion_vnet_gw_name": {
+            "value": "bastion-vnet-gw"
+        }
+    }
+}
