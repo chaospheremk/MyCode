@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachines_bastiondc_name": {
+            "value": "bastiondc"
+        },
+        "networkInterfaces_bastiondc425_z1_name": {
+            "value": "bastiondc425_z1"
+        },
+        "networkSecurityGroups_bastiondc_nsg_name": {
+            "value": "bastiondc-nsg"
+        },
+        "virtualNetworks_bastion_vnet_externalid": {
+            "value": "/subscriptions/10832e7c-e977-4cca-926a-ddc32daf9398/resourceGroups/bastiontest-rg/providers/Microsoft.Network/virtualNetworks/bastion-vnet"
+        }
+    }
+}
