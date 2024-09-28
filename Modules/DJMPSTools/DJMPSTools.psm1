@@ -210,7 +210,7 @@ function New-DJMComplexPassword {
         $specialChars = [char[]]"!@#$%^&*()-_=+[]{}|;:,.<>?/"
 
         # Combine all character sets
-        $allChars = $upperCase + $lowerCase + $digits + $specialChars
+        [char[]]$allChars = $upperCase + $lowerCase + $digits + $specialChars
     }
 
     Process {
@@ -225,7 +225,7 @@ function New-DJMComplexPassword {
         for ($i = $passwordList.count; $i -lt $Length; $i++) { $passwordList.Add(($allChars | Get-Random)) }
 
         # Convert the password array to a string and return
-        $passwordString = ($passwordList | Get-Random -Shuffle) -join ''
+        [string]$passwordString = ($passwordList | Get-Random -Shuffle) -join ''
 
         return $passwordString
     }
