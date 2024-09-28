@@ -2,7 +2,7 @@ function Copy-Object {
 
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [System.Object]$InputObject
     )
 
@@ -19,7 +19,7 @@ function New-DJMSecretStorePassword {
 
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$SecStoreFilePath
     )
 
@@ -49,11 +49,11 @@ function New-DJMSecretStore {
 
         $paramsSetStoreConfig = @{
 
-            Authentication = 'Password'
-            Confirm = $false
-            Interaction = 'None'
+            Authentication  = 'Password'
+            Confirm         = $false
+            Interaction     = 'None'
             PasswordTimeout = 300
-            ErrorAction = 'Stop'    
+            ErrorAction     = 'Stop'    
         }
     } # begin
 
@@ -77,7 +77,8 @@ function New-DJMSecretStore {
                 Write-Verbose -Message "Creating folder path [$secStoreFolderPath]: FAILED"
                 $_.Exception.Message
             }
-        } else { Write-Verbose -Message "Checking if folder path [$secStoreFolderPath] exists: TRUE" }
+        }
+        else { Write-Verbose -Message "Checking if folder path [$secStoreFolderPath] exists: TRUE" }
 
         Write-Verbose -Message "Checking if secret vault [$secretVaultName] exists..."
 
@@ -97,7 +98,8 @@ function New-DJMSecretStore {
                 Write-Verbose -Message "Registering secret vault [$secStoreFolderPath]: FAILED"
                 $_.Exception.Message
             }
-        } else { Write-Verbose -Message "Checking if secret vault [$secretVaultName] exists: TRUE" }
+        }
+        else { Write-Verbose -Message "Checking if secret vault [$secretVaultName] exists: TRUE" }
 
         Write-Verbose -Message "Generating new secret store password..."
 
@@ -120,7 +122,7 @@ function New-DJMSecretStore {
         Try {
             $existingStoreConfig = Get-SecretStoreConfiguration -ErrorAction 'SilentlyContinue'
         }
-        Catch [Microsoft.PowerShell.SecretManagement.PasswordRequiredException]{ $null = $existingStoreConfig }
+        Catch [Microsoft.PowerShell.SecretManagement.PasswordRequiredException] { $null = $existingStoreConfig }
         Catch { $null = $existingStoreConfig }
 
         if ((-not $existingStoreConfig) -or ($existingStoreConfig.Authentication -eq 'None')) { 
@@ -222,7 +224,7 @@ function New-DJMComplexPassword {
         $passwordList.Add(($specialChars | Get-Random))
 
         # Generate the remaining characters randomly
-        for ($i = $passwordList.count; $i -lt $Length; $i++) { $passwordList.Add(($allChars | Get-Random)) }
+        for ($i = $passwordList.count; $i -lt $Length; $i++) { $passwordList.Add(( $allChars | Get-Random )) }
 
         # Convert the password array to a string and return
         [string]$passwordString = ($passwordList | Get-Random -Shuffle) -join ''
