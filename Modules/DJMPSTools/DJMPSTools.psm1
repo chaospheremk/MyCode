@@ -218,21 +218,17 @@ function New-DJMComplexPassword {
     Process {
 
         $passwordList = [System.Collections.Generic.List[object]]::new()
-        $passwordList.Add(($upperCase | Get-Random))
-        $passwordList.Add(($lowerCase | Get-Random))
-        $passwordList.Add(($digits | Get-Random))
-        $passwordList.Add(($specialChars | Get-Random))
+        $passwordList.Add(($upperCase | Get-SecureRandom))
+        $passwordList.Add(($lowerCase | Get-SecureRandom))
+        $passwordList.Add(($digits | Get-SecureRandom))
+        $passwordList.Add(($specialChars | Get-SecureRandom))
 
         # Generate the remaining characters randomly
-        for ($i = $passwordList.count; $i -lt $Length; $i++) { $passwordList.Add(( $allChars | Get-Random )) }
+        for ($i = $passwordList.count; $i -lt $Length; $i++) { $passwordList.Add(( $allChars | Get-SecureRandom )) }
 
         # Convert the password array to a string and return
-        [string]$passwordString = ($passwordList | Get-Random -Shuffle) -join ''
+        [string]$passwordString = ($passwordList | Get-SecureRandom -Shuffle) -join ''
 
         return $passwordString
     }
 }
-
-# Example: Generate a 20-character long password
-$complexPassword = Generate-ComplexPassword -Length 20
-$complexPassword
