@@ -1,37 +1,69 @@
 using namespace System.Collections.Generic
 
-[List[PSObject]]$allPersonaUserGroups = #Get all user persona groups
+$propsGetADGroup = @( 'Name', 'Members' )
+$paramsGetADGroup = @{ Filter = '*'; Property = $propsGetADGroup; Server = $server; Credential = $credential }
 
-[List[PSObject]]$allPersonaDeviceGroups = #Get all device persona groups
+$paramsGetADGroup.SearchBase = 'UserPersonaGroupsOU'
+[List[PSObject]]$initAllUserPersonaGroups = Get-ADGroup @paramsGetADGroup | Select-Object -Property $propsGetADGroup
 
-[List[PSObject]]$allADUsers = #get all AD users
+$allUserPersonaGroups = @{}
+foreach ($group in $initAllUserPersonaGroups) { $allUserPersonaGroups[$group.DistinguishedName] = $group }
 
-# scope this down somehow
-[List[PSObject]]$allADComputers = #get all AD computers
+$paramsGetADGroup.SearchBase = 'DevicePersonaGroupsOU'
+[List[PSObject]]$initAllDevicePersonaGroups = Get-ADGroup @paramsGetADGroup | Select-Object -Property $propsGetADGroup
 
-[List[PSObject]]$allEntraUsers = #get all Entra ID users
+$allDevicePersonaGroups = @{}
+foreach ($group in $initAllDevicePersonaGroups) { $allDevicePersonaGroups[$group.DistinguishedName] = $group }
 
-#$caGroupMembers = Get all users in CA group
+$propsGetADUser = @( 'Name', 'DistinguishedName', 'SamAccountName' )
+$paramsGetADUser = @{ Filter = '*'; Property = $propsGetADUser; Server = $server; Credential = $credential }
 
-#$allCloudPCs = Get all cloud PCs
+[List[PSObject]]$initAllADUsers = Get-ADUser @paramsGetADUser | Select-Object -Property $propsGetADUser
 
-#$allAVDPCs = Get all AVD PCs
+$allADUsers = @{}
+foreach ($user in $initAllADUsers) { $allADUsers[$user.DistinguishedName] = $user }
 
-$processResultsList = [List[Object]]::new()
+$propsGetADComputer = @( 'Name', 'DistinguishedName' )
+$paramsGetADComputer = @{
 
-foreach ($userPersonaGroup in $userPersonaGroups) {
+    Filter = { OperatingSystem -like 'Windows*' -and OperatingSystem -notlike '*Server*' }
+    Property = $propsGetADComputer
+    Server = $server
+    Credential = $credential
+}
 
-    [PSObject]$devicePersonaGroup = $allDevicePersonaGroups.Where({ $_.Name -eq ($userPersonaGroup.Name -replace 'User', 'Device') })
+[List[PSObject]]$initAllADComputers = Get-ADComputer @paramsGetADComputer | Select-Object -Property $propsGetADComputer
+
+$allADComputers = @{}
+foreach ($computer in $initAllADComputers) { $allADComputers[$computer.Name] = $computer }
+
+$propsGetMgUser = @( 'Id', 'OnPremisesSamAccountName' )
+$paramsGetMgUser = @{ All = $true; Property = $propsGetMgUser }
+
+[List[PSObject]]$initAllEntraUsers = Get-MgUser @paramsGetMgUser | Select-Object -Property $propsGetMgUser
+
+$allEntraUsers = @{}
+foreach ($user in $initAllEntraUsers) { if( $null -ne $user.OnPremisesSamAccountName) { $allEntraUsers[$user.OnPremisesSamAccountName] = $user } }
+
+$processResultsList = [List[PSObject]]::new()
+
+foreach ($userPersonaGroup in $allUserPersonaGroups) {
+
+    $devicePersonaGroupName = $userPersonaGroup.Name -replace 'User', 'Device'
+
+    [PSObject]$devicePersonaGroup = $allDevicePersonaGroups[$devicePersonaGroupName]
 
     foreach ($member in $userPersonaGroup.Members) {
 
-        [PSObject]$memberADUser = $allADUsers.Where({ $_.DistinguishedName -eq $member })
+        [PSObject]$memberADUser = $allADUsers[$member]
 
-        [PSObject]$memberEntraUser = $allEntraUsers.Where({ $_.SamAccountName -eq $memberADUser.SamAccountName })
+        [PSObject]$memberEntraUser = $allEntraUsers[$memberADUser.SamAccountName]
 
-        foreach ( $memberEntraDevice in $memberEntraUser.Devices ) {
+        [List[PSObject]]$registeredDevices = (Get-MgUserRegisteredDevice -UserId $memberEntraUser.Id).Where({ ($_.AdditionalProperties.operatingSystem -eq 'Windows') -and ($true -eq $_.AdditionalProperties.accountEnabled) })
 
-            $memberADComputer = $allADComputers.Where({ $_.Name -eq $memberEntraDevice.Name })
+        foreach ( $registeredDevice in $registeredDevices ) {
+
+            [PSObject]$memberADComputer = $allADComputers[$registeredDevice.DisplayName]
 
             if ($devicePersonaGroup.Members -notcontains $memberADComputer.DistinguishedName) {
 
