@@ -5,7 +5,7 @@ function Setup-SecretVault {
         [string]$VaultName = 'MySecretVault',
 
         [Parameter(Mandatory = $false)]
-        [string]$PasswordFilePath = "$env:USERPROFILE\secretvaultpassword.xml"
+        [string]$VaultKeyFilePath = "$env:USERPROFILE\secretvaultpassword.xml"
     )
 
     # This will allow for verbose logging if -Verbose is provided
@@ -27,12 +27,12 @@ function Setup-SecretVault {
 
     function Prompt-And-Save-Password {
         param (
-            [string]$PasswordFilePath
+            [string]$VaultKeyFilePath
         )
         Write-Host "Secret Store password required."
         $SecurePassword = Read-Host -AsSecureString "Enter Secret Store password"
-        Write-Verbose "Saving password to $PasswordFilePath"
-        $SecurePassword | Export-Clixml -Path $PasswordFilePath
+        Write-Verbose "Saving password to $VaultKeyFilePath"
+        $SecurePassword | Export-Clixml -Path $VaultKeyFilePath
         return $SecurePassword
     }
 
@@ -60,13 +60,13 @@ function Setup-SecretVault {
         Write-Verbose "SecretStore is not initialized. Setting it up now."
         
         # Check if password file exists
-        if (Test-Path $PasswordFilePath) {
+        if (Test-Path $VaultKeyFilePath) {
             Write-Verbose "Password file found. Loading password."
-            $SecurePassword = Import-Clixml -Path $PasswordFilePath
+            $SecurePassword = Import-Clixml -Path $VaultKeyFilePath
         }
         else {
             Write-Verbose "Password file not found. Prompting for password."
-            $SecurePassword = Prompt-And-Save-Password -PasswordFilePath $PasswordFilePath
+            $SecurePassword = Prompt-And-Save-Password -PasswordFilePath $VaultKeyFilePath
         }
 
         # Register and initialize the secret vault
@@ -80,9 +80,9 @@ function Setup-SecretVault {
         Write-Verbose "SecretStore is already initialized."
 
         # Check if password file exists
-        if (Test-Path $PasswordFilePath) {
+        if (Test-Path $VaultKeyFilePath) {
             Write-Verbose "Password file found. Loading password."
-            $SecurePassword = Import-Clixml -Path $PasswordFilePath
+            $SecurePassword = Import-Clixml -Path $VaultKeyFilePath
             # Attempt to unlock the SecretStore
             Unlock-SecretStore -SecurePassword $SecurePassword
         }
@@ -96,3 +96,5 @@ function Setup-SecretVault {
 
 # Example usage:
 # Setup-SecretVault -VaultName 'MyVault'
+
+Get-AzAutomation
