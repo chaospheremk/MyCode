@@ -171,18 +171,19 @@ function Install-ModuleIfNeeded {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$ModuleName
+        [string[]]
+        $ModuleName
     )
-
-    Begin {
-
-    } #begin
 
     Process {
 
-        if (-not (Get-InstalledModule -Name $ModuleName)) {
+        foreach ($module in $moduleName) {
 
-            Install-Module -Name $ModuleName -Force -ErrorAction Stop
+            if (-not (Get-InstalledModule -Name $ModuleName)) {
+
+                Try { Install-Module -Name $ModuleName -Force -ErrorAction 'Stop' }
+                Catch { $_.Exception.Message }
+            }
         }
     }
 }
